@@ -10,62 +10,36 @@ import (
 
 func main() {
 	var (
-		inputFile   string
-		outputFile  string
-		inscopeFile string
+		inscopeFile  string
 		outscopeFile string
 	)
 
 	// Definir los flags personalizados
-	flag.StringVar(&inputFile, "if", "", "Archivo de entrada (inputFile)")
-	flag.StringVar(&outputFile, "of", "", "Archivo de salida (outputFile)")
-	flag.StringVar(&inscopeFile, "is", "", "Archivo con dominios en inscope")
-	flag.StringVar(&outscopeFile, "os", "", "Archivo con dominios en outscope")
+	flag.StringVar(&inscopeFile, "is", "scope.cfg", "Archivo con dominios en inscope (por defecto: scope.cfg)")
+	flag.StringVar(&outscopeFile, "os", "outscope.cfg", "Archivo con dominios en outscope (por defecto: outscope.cfg)")
 
 	// Parsear los flags
 	flag.Parse()
-
-	// Verificar que se han proporcionado los cuatro parámetros
-	if inputFile == "" || outputFile == "" || inscopeFile == "" || outscopeFile == "" {
-		fmt.Println("Faltan parámetros. Uso: programa -if inputFile -of outputFile -is inscope -os outscope")
-		os.Exit(1)
-	}
 
 	// Leer los dominios de inscope y outscope
 	inscopeDomains := readDomainsFromFile(inscopeFile)
 	outscopeDomains := readDomainsFromFile(outscopeFile)
 
-	// Abrir el archivo de entrada para lectura
-	input, err := os.Open(inputFile)
-	if err != nil {
-		fmt.Println("No se puede abrir el archivo de entrada:", err)
-		os.Exit(1)
-	}
-	defer input.Close()
+	// Crear un scanner para leer la entrada estándar (pipe)
+	scanner := bufio.NewScanner(os.Stdin)
 
-	// Abrir el archivo de salida para escritura
-	output, err := os.Create(outputFile)
-	if err != nil {
-		fmt.Println("No se puede crear el archivo de salida:", err)
-		os.Exit(1)
-	}
-	defer output.Close()
-
-	scanner := bufio.NewScanner(input)
-
-	// Recorrer las líneas del archivo de entrada
+	// Recorrer las líneas de la entrada estándar
 	for scanner.Scan() {
 		line := scanner.Text()
 		// Comprobar si el subdominio está en inscope y no en outscope
 		if isInScope(line, inscopeDomains) && !isInScope(line, outscopeDomains) {
-			// Escribir el subdominio en el archivo de salida
+			// Escribir el subdominio en la salida estándar
 			fmt.Println(line)
-			output.WriteString(line + "\n")
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Error al leer el archivo de entrada:", err)
+		fmt.Println("Error al leer la entrada estándar:", err)
 		os.Exit(1)
 	}
 }
@@ -102,4 +76,3 @@ func isInScope(domain string, scope map[string]bool) bool {
 	}
 	return false
 }
-
